@@ -6,15 +6,9 @@ import numpy as np
 @dataclass
 class MaxEnt:
 
-    total_events:int = field(default = 3)
-    payoff : Callable[ [int] , float] = field(default = lambda i : i)
-    multiplier_: float = field(init = False , default = None)
-    payoffs : np.ndarray = field(init = False)
+    payoffs : np.ndarray = field(default_factory = lambda : np.arange(1,7,1))
+    multiplier_: float = field(init = False , default = None , repr = False)
 
-    def __post_init__(self) -> None:
-        self.payoffs = self.payoff(np.arange(1,self.total_events+1,1))
-
-    @property
     def predict_proba(self) -> np.ndarray:
         try:
             return self._gibbs_distr(self.multiplier_)
@@ -23,25 +17,25 @@ class MaxEnt:
 
     def _gibbs_distr(self , mu) -> np.ndarray:
         partition_func_eval = self._partition_function(mu)
-        return np.e**( self.payoffs * mu)/partition_func_eval
+        return np.e**( - self.payoffs * mu)/partition_func_eval
 
     def _partition_function(self,mu) -> float:
-        return (np.e**(self.payoffs * mu)).sum()
+        return (np.e**(  - self.payoffs * mu)).sum()
 
     def predict(self) -> int:
-        return self.probabilities.argmax()
+        return self.predict_proba().argmax() + 1
 
     def _trainer(self, mean:float,  mu: float) -> float:
         return mean - np.dot( self.payoffs , self._gibbs_distr(mu) )
 
     def _gradient(self, mu:float) -> float:
         gibbs = self._gibbs_distr(mu)
-        return -  np.dot( self.payoffs**2 , gibbs ) + np.dot( self.payoffs , gibbs )**2
+        return np.dot( self.payoffs**2 , gibbs ) - np.dot( self.payoffs , gibbs )**2
 
     def fit(self , mean : float ,
                       max_iter : int = 200 ,
-                      tolerance : float = 1e-10 ,
-                      verbose : bool = False) -> bool:
+                      tolerance : float = 1e-11 ,
+                      verbose : bool = False) -> None:
         mu = 0
         iters = 0
         while abs(self._trainer(mean , mu)) > tolerance:
@@ -55,22 +49,12 @@ class MaxEnt:
         self.multiplier_ = mu
 
 
-class RandomProcess:
-
-    def generate(self):
-        roll = random.random()
-        if roll <= 0.5:
-            return 100
-        elif roll <= 0.8:
-            return 220
-        else:
-            return 450
-
 
 if __name__ == "__main__":
     payoff = lambda i : i
-    sample_average = 3.5
     total_events = 6
+    sample_average = 3.5
+
     model = MaxEnt(sample_average , total_events , payoff)
     model.fit(verbose = True)
     print(model.probabilities)
