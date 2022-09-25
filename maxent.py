@@ -1,7 +1,7 @@
 from dataclasses import dataclass , field
 from typing import Callable , List
 import numpy as np
-
+import matplotlib.pyplot as plt
 
 @dataclass
 class MaxEnt:
@@ -38,8 +38,10 @@ class MaxEnt:
                       verbose : bool = False) -> None:
         mu = 0
         iters = 0
+        max_fit = 10
         while abs(self._trainer(mean , mu)) > tolerance:
             mu = mu - self._trainer(mean , mu)/self._gradient(mu)
+
             if verbose:
                 print(f"iteration {iters}:\t{mu}\t{self._trainer(mean , mu)}")
             iters += 1
@@ -53,10 +55,10 @@ class MaxEnt:
 if __name__ == "__main__":
     payoff = lambda i : i
     total_events = 6
-    sample_average = 3.5
+    sample_average = 1.2
 
-    model = MaxEnt(sample_average , total_events , payoff)
-    model.fit(verbose = True)
-    print(model.probabilities)
-    plt.bar(np.arange(1,total_events+1,1) , model.probabilities)
+    model = MaxEnt()
+    model.fit(sample_average , verbose = True)
+    print(model.predict_proba())
+    plt.bar(np.arange(1,total_events+1,1) , model.predict_proba())
     plt.show()
